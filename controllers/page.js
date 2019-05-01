@@ -1,4 +1,5 @@
 import Page from '../models/page';
+import User from '../models/user';
 
 export default {
   async create(req, res, next) {
@@ -22,7 +23,7 @@ export default {
   async getAll(req, res, next) {
     try {
       var pages = await Page.find({});
-    } catch (error) {
+    } catch ({ message }) {
       return next({
         status: 500,
         message
@@ -31,4 +32,74 @@ export default {
 
     res.json({ pages })
   },
+
+  async getPagesByUserLogin(req, res, next) {
+    const { login } = req.params;
+
+    try {
+      var user = await User.findOne({ login })
+    } catch ({ message }) {
+      return next({
+        status: 500,
+        message
+      });
+    }
+
+    if (!user) {
+      return next({
+        status: 404,
+        message: 'User not found'
+      })
+    }
+
+    try {
+      var pages = await Page.find({ userId: user._id });
+    } catch ({ message }) {
+      return next({
+        status: 500,
+        message
+      })
+    }
+
+    res.json({ pages });
+  },
+
+  async deletePage(req, res, next) {
+    const _id = req.params.id;
+    const userId = req.user._id;
+
+    try {
+      var page = await Page.findOne({ _id })
+    } catch ({ message }) {
+      return next({
+        status: 500,
+        message
+      })
+    }
+
+    if (!page) {
+      return next({
+        status: 404,
+        message: 'Page not found'
+      })
+    }
+
+    if (userId.toString() !== page.userId.toString()) {
+      return next({
+        status: 403,
+        message: 'Permission denied'
+      })
+    }
+
+    try {
+      page.remove();
+    } catch ({ message }) {
+      return next({
+        status: 500,
+        message
+      })
+    }
+
+    res.json({ message: 'success'});
+  }
 }
